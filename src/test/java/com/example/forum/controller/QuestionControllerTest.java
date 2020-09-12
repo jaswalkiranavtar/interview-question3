@@ -1,4 +1,4 @@
-package com.example.demo.controller;
+package com.example.forum.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -21,11 +21,12 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 
-import com.example.demo.exception.ExceptionAdvice;
-import com.example.demo.model.Error;
-import com.example.demo.model.Question;
-import com.example.demo.model.Reply;
-import com.example.demo.service.QuestionService;
+import com.example.forum.controller.QuestionController;
+import com.example.forum.exception.ExceptionAdvice;
+import com.example.forum.model.Error;
+import com.example.forum.model.Question;
+import com.example.forum.model.Reply;
+import com.example.forum.service.QuestionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class QuestionControllerTest {

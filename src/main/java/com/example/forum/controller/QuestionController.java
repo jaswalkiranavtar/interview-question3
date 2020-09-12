@@ -1,4 +1,4 @@
-package com.example.demo.controller;
+package com.example.forum.controller;
 
 import java.util.List;
 
@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.demo.model.Error;
-import com.example.demo.model.Question;
-import com.example.demo.model.Reply;
-import com.example.demo.service.QuestionService;
+import com.example.forum.model.Error;
+import com.example.forum.model.Question;
+import com.example.forum.model.Reply;
+import com.example.forum.service.QuestionService;
 
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;

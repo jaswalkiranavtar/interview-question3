@@ -1,4 +1,4 @@
-package com.example.demo.model;
+package com.example.forum.model;
 
 import javax.validation.constraints.NotBlank;
 

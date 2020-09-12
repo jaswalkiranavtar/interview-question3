@@ -1,6 +1,4 @@
-package com.example.demo.model;
-
-import javax.validation.constraints.NotBlank;
+package com.example.forum.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
@@ -9,15 +7,19 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+import javax.validation.Valid;
+import javax.validation.constraints.*;
+
 /**
- * Reply pojo.
+ * Question pojo.
  */
 
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Reply {
+public class Question  {
 
     @ApiModelProperty(value = "")
     @JsonProperty("id")
@@ -34,7 +36,8 @@ public class Reply {
     private String message;
 
     @ApiModelProperty(value = "")
-    @JsonProperty("questionId")
-    private Long questionId;
+    @JsonProperty("replies")
+    @Valid
+    private List<Reply> replies = null;
 
 }

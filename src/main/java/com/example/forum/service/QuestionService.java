@@ -1,14 +1,15 @@
-package com.example.demo.service;
+package com.example.forum.service;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Service;
 
-import com.example.demo.model.Question;
-import com.example.demo.model.Reply;
+import com.example.forum.model.Question;
+import com.example.forum.model.Reply;
 
 /**
  * {@link Service} class abstracting the datastore interaction logic. A {@link ConcurrentHashMap} is used as an in-memory data store.
@@ -24,25 +25,23 @@ public class QuestionService {
     /**
      * A tracker used to track primary key of {@link Question}s in in-memory datastore.
      */
-    private Long QUESTION_ID_TRACKER = 0L;
+    private AtomicLong questionIdTracker = new AtomicLong();
 
     /**
      * A tracker used to track primary key of {@link Reply}s in in-memory datastore.
      */
-    private Long REPLY_ID_TRACKER = 0L;
+    private AtomicLong replyIdTracker = new AtomicLong();
 
     
     /**
-     * Saves a new {@link Question} to datastore. As this is update data operation,
-     * it is synchronized to prevent multiple threads from interfering with each other
-     * and corrupting data.
+     * Saves a new {@link Question} to datastore.
      *
      * @param question {@link Question} to be asked in the forum
      * @return question saved in dataStore and populated with questionId
      */
-    public synchronized Question addQuestion(Question question) {
+    public Question addQuestion(Question question) {
         Question savedQuestion = Question.builder()
-                .id(++QUESTION_ID_TRACKER).author(question.getAuthor()).message(question.getMessage()).replies(new ArrayList<>())
+                .id(questionIdTracker.incrementAndGet()).author(question.getAuthor()).message(question.getMessage()).replies(new ArrayList<>())
                 .build();
         dataStore.put(savedQuestion.getId(), savedQuestion);
         return savedQuestion;
@@ -69,23 +68,20 @@ public class QuestionService {
     }
 
     /**
-     * Add a reply to a particular question. The reply is added to the replies collection of question represented by questionId.
+     * Add a reply to a particular question. The reply is added to the replies collection of question
+     * represented by questionId.
      * 
-     * As this is update data operation,
-     * it is synchronized to prevent multiple threads from interfering with each other
-     * and corrupting data.
-     *
      * @param questionId ID of question to which this reply is answered
      * @param reply Reply to the question
      * @return reply saved in dataStore and populated with replyId or null if the question corresponding to questionId doesn't exist
      */
-    public synchronized Reply replyToQuestion(Long questionId, Reply reply) {
+    public Reply replyToQuestion(Long questionId, Reply reply) {
         
         Question questionToReply = dataStore.get(questionId);
         if(questionToReply == null)
             return null;
         Reply savedReply = Reply.builder()
-                .id(++REPLY_ID_TRACKER).author(reply.getAuthor()).message(reply.getMessage()).questionId(questionId)
+                .id(replyIdTracker.incrementAndGet()).author(reply.getAuthor()).message(reply.getMessage()).questionId(questionId)
                 .build();
         questionToReply.getReplies().add(savedReply);
         return savedReply;

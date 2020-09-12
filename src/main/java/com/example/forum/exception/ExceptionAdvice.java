@@ -1,4 +1,4 @@
-package com.example.demo.exception;
+package com.example.forum.exception;
 
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import com.example.demo.model.Error;
+import com.example.forum.model.Error;
 
 /**
  * A {@link ControllerAdvice} which globally handles {@link NotifyingException}

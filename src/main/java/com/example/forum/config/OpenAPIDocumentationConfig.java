@@ -1,4 +1,4 @@
-package com.example.demo.config;
+package com.example.forum.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController;
@@ -49,7 +49,7 @@ public class OpenAPIDocumentationConfig {
     public Docket customImplementation(ServletContext servletContext, @Value("${openapi.forum.base-path:/v2}") String basePath) {
         return new Docket(DocumentationType.SWAGGER_2)
             .select()
-            .apis(RequestHandlerSelectors.basePackage("com.example.demo.controller"))
+            .apis(RequestHandlerSelectors.basePackage("com.example.forum.controller"))
             .build()
             .pathProvider(new BasePathAwareRelativePathProvider(servletContext, basePath))
             .apiInfo(apiInfo());
