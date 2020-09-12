@@ -1,21 +1,19 @@
 package com.example.demo.model;
 
-import java.util.List;
-
 import javax.validation.constraints.NotBlank;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
  * Reply pojo.
  */
 
-@Data
+@Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

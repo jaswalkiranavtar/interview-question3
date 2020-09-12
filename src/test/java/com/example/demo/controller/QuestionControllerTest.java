@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import com.example.demo.exception.ExceptionAdvice;
 import com.example.demo.model.Error;
 import com.example.demo.model.Question;
+import com.example.demo.model.Reply;
 import com.example.demo.service.QuestionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -282,7 +283,7 @@ public class QuestionControllerTest {
      * @throws Exception
      */
     @Test
-    @DisplayName("POST /questions | 400 Bad Request and error array in response")
+    @DisplayName("POST /questions body:missing | 400 Bad Request and error array in response")
     public void shouldReturn400BadRequestWhenQuestionIsMissingInPostRequest() throws Exception {
 
         MvcResult result = mockMvc
@@ -299,17 +300,17 @@ public class QuestionControllerTest {
     /**
      * When:
      *      The POST request is sent to /v2/questions with {@link Question}
-     *      having invalid author and message.
+     *      having blank author and message.
      * 
      * Then: 
      *      The request completes with 400 Bad Request status and
-     *      returns array of errors in response describing which fields in request failed vaidation.
+     *      returns array of errors in response describing which fields in request failed validation.
      *      
      * @throws Exception
      */
     @Test
-    @DisplayName("POST /questions body:author and message invalid | 400 Bad Request and error array in response")
-    public void shouldReturn400BadRequestWhenAuthorAndMessageInvalidInRequestBody() throws Exception {
+    @DisplayName("POST /questions body:author and message blank | 400 Bad Request and error array in response")
+    public void shouldReturn400BadRequestWhenQuestionAuthorAndMessageAreBlankInRequestBody() throws Exception {
 
         Question question = Question.builder().author("").message("").build();
         MvcResult result = mockMvc
@@ -330,4 +331,287 @@ public class QuestionControllerTest {
         assertThat(errors.get(1).getMessage()).contains("should not be blank");
 
     }
+
+    /**
+     * Given:
+     *      The datastore contains question with id 1.
+     * 
+     * When:
+     *      The GET request is sent to /v2/questions/{questionId}.
+     * 
+     * Then: 
+     *      The request completes with 200 OK status and
+     *      returns the questions with all replies in response body.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("question present | GET /questions/{questionId} | 200 OK and question with all replies")
+    public void shouldReturnQuestionWithAllRepliesWhenQuestionWithIdPresent2() throws Exception {
+
+        questionService.addQuestion(Question.builder().author("John").message("Hello").build());
+        questionService.replyToQuestion(1L, Reply.builder().id(1L).author("Jane").message("Hi").questionId(1L).build());
+        questionService.replyToQuestion(1L, Reply.builder().id(2L).author("Alice").message("Howdy!").questionId(1L).build());
+
+        MvcResult result = mockMvc.perform(get("/v2/questions/1"))
+            .andDo(print())
+            .andExpect(status().isOk())
+            .andReturn();
+
+        Question question = objectMapper.readValue(result.getResponse().getContentAsString(), Question.class);
+        assertThat(question.getId()).isEqualTo(1L);
+        assertThat(question.getAuthor()).isEqualTo("John");
+        assertThat(question.getMessage()).isEqualTo("Hello");
+        assertThat(question.getReplies().get(0).getId()).isEqualTo(1L);
+        assertThat(question.getReplies().get(0).getAuthor()).isEqualTo("Jane");
+        assertThat(question.getReplies().get(0).getMessage()).isEqualTo("Hi");
+        assertThat(question.getReplies().get(0).getQuestionId()).isEqualTo(1L);
+        assertThat(question.getReplies().get(1).getId()).isEqualTo(2L);
+        assertThat(question.getReplies().get(1).getAuthor()).isEqualTo("Alice");
+        assertThat(question.getReplies().get(1).getMessage()).isEqualTo("Howdy!");
+        assertThat(question.getReplies().get(1).getQuestionId()).isEqualTo(1L);
+
+    }
+
+    /**
+     * When:
+     *      The GET request is sent to /v2/questions/{questionId}
+     *      and questionId is not number.
+     * 
+     * Then: 
+     *      The request completes with 400 Bad Request status and
+     *      returns array of errors in response describing the problem.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("GET /questions/{questionId} questionId is not number | 400 Bad Request and error array in response")
+    public void shouldReturn400BadRequestWhenRequestedQuestionIdIsNotNumber() throws Exception {
+
+        MvcResult result = mockMvc.perform(get("/v2/questions/abc"))
+            .andDo(print())
+            .andExpect(status().isBadRequest())
+            .andReturn();
+
+        List<Error> errors = Arrays.asList(objectMapper.readValue(result.getResponse().getContentAsString(), Error[].class));
+        assertThat(errors.get(0).getFieldName()).isEqualTo("questionId");
+        assertThat(errors.get(0).getRejectedValue()).isEqualTo("abc");
+
+    }
+
+    /**
+     * When:
+     *      The GET request is sent to /v2/questions/{questionId}
+     *      and {@link Question} with that questionId doesn't exist.
+     * 
+     * Then: 
+     *      The request completes with 404 Not Found status and
+     *      empty response body.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("GET /questions/{questionId} questionId doesn't exist | 404 Not Found and empty response")
+    public void shouldReturn404NotFoundWhenRequestedQuestionIdDoesntExist() throws Exception {
+
+        MvcResult result = mockMvc.perform(get("/v2/questions/1"))
+            .andDo(print())
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).isEqualTo("");
+
+    }
+
+    /**
+     * Given:
+     *      The {@link Question} with questionId exist.
+     *      
+     * When:
+     *      The POST request is sent to /v2/questions/{questionId}/reply
+     *      with {@link Reply} in request body.
+     * 
+     * Then: 
+     *      The request completes with 201 Created status and
+     *      returns the {@link Reply} populated with id in response body.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("POST /questions/{questionId}/reply body:Reply | 201 Created and Reply with id")
+    public void shouldReturnReplyWithIdWhenPostReplyRequestIsSent() throws Exception {
+
+        Question savedQuestion = questionService.addQuestion(Question.builder().author("John").message("Hello").build());
+        Reply reply = Reply.builder().author("Jane").message("Hi").build();
+
+        MvcResult result = mockMvc
+            .perform(post("/v2/questions/" + savedQuestion.getId() + "/reply").content(objectMapper.writeValueAsString(reply))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+            .andDo(print())
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        Reply savedReply = objectMapper.readValue(result.getResponse().getContentAsString(), Reply.class);
+        assertThat(savedReply.getId()).isEqualTo(1L);
+        assertThat(savedReply.getAuthor()).isEqualTo("Jane");
+        assertThat(savedReply.getMessage()).isEqualTo("Hi");
+        assertThat(savedReply.getQuestionId()).isEqualTo(savedQuestion.getId());
+
+    }
+
+    /**
+     * Given:
+     *      The {@link Question} with questionId exist.
+     *      
+     * When:
+     *      The POST request is sent to /v2/questions/{questionId}/reply
+     *      with {@link Reply} in request body which has blank author and message.
+     * 
+     * Then: 
+     *      The request completes with 400 Bad Request status and
+     *      returns array of errors in response describing which fields in request failed validation.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("POST /questions/{questionId}/reply body:author and message blank | 400 Bad Request and error array in response")
+    public void shouldReturn400BadRequestWhenReplyAuthorAndMessageAreBlankInRequestBody() throws Exception {
+
+        Question savedQuestion = questionService.addQuestion(Question.builder().author("John").message("Hello").build());
+        Reply reply = Reply.builder().author("").message("").build();
+
+        MvcResult result = mockMvc
+            .perform(post("/v2/questions/" + savedQuestion.getId() + "/reply").content(objectMapper.writeValueAsString(reply))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+            .andDo(print())
+            .andExpect(status().isBadRequest())
+            .andReturn();
+
+        List<Error> errors = Arrays.asList(objectMapper.readValue(result.getResponse().getContentAsString(), Error[].class));
+        assertThat(errors.get(0).getFieldName()).isIn("message", "author");
+        assertThat(errors.get(0).getObjectName()).isEqualTo("reply");
+        assertThat(errors.get(0).getRejectedValue()).isEqualTo("");
+        assertThat(errors.get(0).getMessage()).contains("should not be blank");
+        assertThat(errors.get(1).getFieldName()).isIn("message", "author");
+        assertThat(errors.get(1).getObjectName()).isEqualTo("reply");
+        assertThat(errors.get(1).getRejectedValue()).isEqualTo("");
+        assertThat(errors.get(1).getMessage()).contains("should not be blank");
+
+    }
+
+    /**
+     * Given:
+     *      The {@link Question} with questionId doesn't exist.
+     * 
+     * When:
+     *      The POST request is sent to /v2/questions/{questionId}/reply
+     *      with {@link Reply} in request body.
+     * 
+     * Then: 
+     *      The request completes with 404 Not Found status and
+     *      returns array of errors in response describing the problem.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("POST /questions/{questionId}/reply questionId doesn't exist | 404 Not Found and empty response")
+    public void shouldReturn404NotFoundWhenSendingReplyToNonExistentQuestionId() throws Exception {
+
+        Reply reply = Reply.builder().author("Jane").message("Hi").build();
+
+        MvcResult result = mockMvc
+            .perform(post("/v2/questions/1/reply").content(objectMapper.writeValueAsString(reply))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+            .andDo(print())
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).isEqualTo("");
+
+    }
+
+    /**
+     * When:
+     *      The POST request is sent to /v2/questions/{questionId}/reply
+     *      and questionId is not number.
+     * 
+     * Then: 
+     *      The request completes with 400 Bad Request status and
+     *      returns array of errors in response describing the problem.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("POST /questions/{questionId}/reply questionId is not number | 400 Bad Request and error array in response")
+    public void shouldReturn400BadRequestWhenReplyingToQuestionWithNonNumberQuestionId() throws Exception {
+
+        Reply reply = Reply.builder().author("Jane").message("Hi").build();
+
+        MvcResult result = mockMvc
+            .perform(post("/v2/questions/abc/reply").content(objectMapper.writeValueAsString(reply))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+            .andDo(print())
+            .andExpect(status().isBadRequest())
+            .andReturn();
+
+        List<Error> errors = Arrays.asList(objectMapper.readValue(result.getResponse().getContentAsString(), Error[].class));
+        assertThat(errors.get(0).getFieldName()).isEqualTo("questionId");
+        assertThat(errors.get(0).getRejectedValue()).isEqualTo("abc");
+
+    }
+
+    /**
+     * Given:
+     *      The {@link Question} with questionId exist.
+     *      
+     * When:
+     *      The POST request is sent to /v2/questions/{questionId}/reply with request body missing.
+     * 
+     * Then: 
+     *      The request completes with 400 Bad Request status and
+     *      returns array of errors in response describing the problem.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("POST /questions/{questionId}/reply body:missing | 400 Bad Request and error array in response")
+    public void shouldReturn400BadRequestWhenReplyIsMissingInPostRequest() throws Exception {
+
+        Question savedQuestion = questionService.addQuestion(Question.builder().author("John").message("Hello").build());
+
+        MvcResult result = mockMvc
+            .perform(post("/v2/questions/" + savedQuestion.getId() + "/reply").header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+            .andDo(print())
+            .andExpect(status().isBadRequest())
+            .andReturn();
+
+        List<Error> errors = Arrays.asList(objectMapper.readValue(result.getResponse().getContentAsString(), Error[].class));
+        assertThat(errors.get(0).getObjectName()).isEqualTo("Request Body");
+
+    }
+
+    /**
+     * When:
+     *      The GET request is sent to a non existent resource /v2/abc/def.
+     * 
+     * Then: 
+     *      The request completes with 404 Not Found status and
+     *      missing response.
+     *      
+     * @throws Exception
+     */
+    @Test
+    @DisplayName("GET /abc/def | 404 Not Found and empty response")
+    public void shouldReturn404NotFoundWhenRequestingResourceNotImplementedAsEndpoint() throws Exception {
+
+        MvcResult result = mockMvc
+            .perform(get("/v2/abc/def"))
+            .andDo(print())
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        assertThat(result.getResponse().getContentAsString()).isEqualTo("");
+
+    }
+
 }
